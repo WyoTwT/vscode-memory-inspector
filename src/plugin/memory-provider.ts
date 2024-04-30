@@ -30,6 +30,7 @@ export interface LabeledUint8Array extends Uint8Array {
 export class MemoryProvider {
     public static ReadKey = `${manifest.PACKAGE_NAME}.canRead`;
     public static WriteKey = `${manifest.PACKAGE_NAME}.canWrite`;
+    public static ReadVariableKey = `${manifest.PACKAGE_NAME}.canReadVariable`;
 
     private _onDidStopDebug = new vscode.EventEmitter<vscode.DebugSession>();
     public readonly onDidStopDebug = this._onDidStopDebug.event;
@@ -105,10 +106,12 @@ export class MemoryProvider {
     createContext(session = vscode.debug.activeDebugSession): SessionContext {
         const sessionId = session?.id;
         const capabilities = sessionId ? this.sessionDebugCapabilities.get(sessionId) : undefined;
+        const canReadVariable = this.supportShowVariables();
         return {
             sessionId,
             canRead: !!capabilities?.supportsReadMemoryRequest,
-            canWrite: !!capabilities?.supportsWriteMemoryRequest
+            canWrite: !!capabilities?.supportsWriteMemoryRequest,
+            canReadVariable: !!capabilities?.supportsReadMemoryRequest && !!canReadVariable
         };
     }
 
@@ -116,6 +119,7 @@ export class MemoryProvider {
         const newContext = this.createContext(session);
         vscode.commands.executeCommand('setContext', MemoryProvider.ReadKey, newContext.canRead);
         vscode.commands.executeCommand('setContext', MemoryProvider.WriteKey, newContext.canWrite);
+        vscode.commands.executeCommand('setContext', MemoryProvider.ReadVariableKey, newContext.canReadVariable);
         this._onDidChangeSessionContext.fire(newContext);
     }
 
@@ -205,5 +209,11 @@ export class MemoryProvider {
         const session = this.assertActiveSession('get current debug Context');
         const handler = this.adapterRegistry?.getHandlerForSession(session.type);
         return handler?.getCurrentContext?.(session);
+    }
+
+    public supportShowVariables(): boolean {
+        const session = this.assertActiveSession('supports show variables');
+        const handler = this.adapterRegistry?.getHandlerForSession(session.type);
+        return handler?.supportShowVariables?.(session) ?? true;
     }
 }

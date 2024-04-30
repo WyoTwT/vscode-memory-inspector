@@ -71,7 +71,8 @@ export interface MemoryAppState extends MemoryState, MemoryDisplayConfiguration 
 
 const DEFAULT_SESSION_CONTEXT: SessionContext = {
     canRead: false,
-    canWrite: false
+    canWrite: false,
+    canReadVariable: false
 };
 
 const MEMORY_DISPLAY_CONFIGURATION_DEFAULTS: MemoryDisplayConfiguration = {

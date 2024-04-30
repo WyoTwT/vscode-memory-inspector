@@ -36,6 +36,7 @@ export interface AdapterCapabilities {
     writeMemory?(session: vscode.DebugSession, params: WriteMemoryArguments, context?: Context): Promise<WriteMemoryResult>;
     getContexts?(session: vscode.DebugSession): Promise<Context[]>;
     getCurrentContext?(session: vscode.DebugSession): Promise<Context | undefined>;
+    supportShowVariables?(session: vscode.DebugSession): boolean;
 }
 
 export type WithChildren<Original> = Original & { children?: Array<WithChildren<DebugProtocol.Variable>> };
@@ -143,6 +144,8 @@ export class AdapterVariableTracker implements vscode.DebugAdapterTracker {
 
     getContexts?(session: vscode.DebugSession): Promise<Context[]>;
     getCurrentContext?(session: vscode.DebugSession): Promise<Context | undefined>;
+
+    supportShowVariables?(session: vscode.DebugSession): boolean;
 }
 
 export class VariableTracker implements AdapterCapabilities {

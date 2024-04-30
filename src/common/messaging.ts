@@ -47,6 +47,7 @@ export interface SessionContext {
     sessionId?: string;
     canRead: boolean;
     canWrite: boolean;
+    canReadVariable: boolean;
 }
 
 // Notifications

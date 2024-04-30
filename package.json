@@ -142,7 +142,7 @@
       "debug/variables/context": [
         {
           "command": "memory-inspector.show-variable",
-          "when": "canViewMemory && memory-inspector.canRead"
+          "when": "canViewMemory && memory-inspector.canReadVariable"
         },
         {
           "command": "memory-inspector.store-file",
@@ -152,7 +152,7 @@
       "view/item/context": [
         {
           "command": "memory-inspector.show-variable",
-          "when": "canViewMemory && memory-inspector.canRead"
+          "when": "canViewMemory && memory-inspector.canReadVariable"
         }
       ],
       "explorer/context": [

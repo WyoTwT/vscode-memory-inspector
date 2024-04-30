@@ -57,6 +57,10 @@ export class AmalgamatorSessionManager extends VariableTracker implements Adapte
     async getCurrentContext(session: vscode.DebugSession): Promise<Context | undefined> {
         return this.sessions.get(session.id)?.getCurrentContext?.(session);
     }
+
+    supportShowVariables(_session: vscode.DebugSession): boolean {
+        return false;
+    }
 }
 
 export class AmalgamatorGdbVariableTransformer extends AdapterVariableTracker {
