@@ -24,7 +24,7 @@ import { classNames } from 'primereact/utils';
 import React, { FocusEventHandler, KeyboardEvent, KeyboardEventHandler, MouseEventHandler, ReactNode } from 'react';
 import { validateCount, validateMemoryReference, validateOffset } from '../../common/memory';
 import { Endianness } from '../../common/memory-range';
-import { MemoryOptions, ReadMemoryArguments, SessionContext } from '../../common/messaging';
+import { Context, MemoryOptions, ReadMemoryArguments, SessionContext } from '../../common/messaging';
 import { tryToNumber } from '../../common/typescript';
 import { CONFIG_BYTES_PER_MAU_CHOICES, CONFIG_GROUPS_PER_ROW_CHOICES, CONFIG_MAUS_PER_GROUP_CHOICES } from '../../plugin/manifest';
 import { TableRenderOptions } from '../columns/column-contribution-service';
@@ -48,6 +48,9 @@ export interface OptionsWidgetProps
     isFrozen: boolean;
     storeMemory(): void;
     applyMemory(): void;
+    contexts: Context[];
+    context?: Context;
+    setContext: (debugContext: Context) => void;
 }
 
 interface OptionsWidgetState {
@@ -65,6 +68,7 @@ const enum InputId {
     AddressPadding = 'address-padding',
     AddressRadix = 'address-radix',
     ShowRadixPrefix = 'show-radix-prefix',
+    Contexts = 'debug-contexts'
 }
 
 interface OptionsForm {
@@ -126,6 +130,30 @@ export class OptionsWidget extends React.Component<OptionsWidgetProps, OptionsWi
             this.labelEditInput.current?.select();
         }
     }
+
+    private onContextDropdownChange = (e: DropdownChangeEvent) => {
+        const { setContext, contexts } = this.props;
+        setContext(contexts.filter(context => context.id === Number(e.value))[0]);
+    };
+
+    protected showContexts = () => {
+        if (this.props.contexts.length === 0) {
+            return undefined;
+        }
+        return (
+            <span className='pm-top-label'>
+                <label htmlFor={InputId.Contexts} className='p-inputtext-label'>
+                    Context
+                </label>
+                <Dropdown
+                    id={InputId.Contexts}
+                    value={this.props.context?.id}
+                    options={this.props.contexts}
+                    optionLabel="name"
+                    optionValue="id"
+                    onChange={this.onContextDropdownChange} />
+            </span>);
+    };
 
     override render(): React.ReactNode {
         this.formConfig.initialValues = this.optionsFormValues;
@@ -203,6 +231,7 @@ export class OptionsWidget extends React.Component<OptionsWidgetProps, OptionsWi
                     <Formik {...this.formConfig}>
                         {formik => (
                             <form onSubmit={formik.handleSubmit} className='form-options'>
+                                {this.showContexts()}
                                 <span className={'pm-top-label form-textfield form-texfield-long'}>
                                     <label htmlFor={InputId.Address} className={`p-inputtext-label ${readDisabled ? 'p-disabled' : ''}`} >
                                         Address

@@ -209,10 +209,10 @@ export class EditableDataColumnRow extends React.Component<EditableDataColumnRow
         if (originalData !== this.inputText.current.value) {
             const newMemoryValue = this.processData(this.inputText.current.value, this.state.editedRange);
             const converted = Buffer.from(newMemoryValue, 'hex').toString('base64');
-            await messenger.sendRequest(writeMemoryType, HOST_EXTENSION, {
+            await messenger.sendRequest(writeMemoryType, HOST_EXTENSION, [{
                 memoryReference: toHexStringWithRadixMarker(this.state.editedRange.startAddress),
                 data: converted
-            }).catch(() => { });
+            }, undefined]).catch(() => { });
         }
 
         this.disableEdit();

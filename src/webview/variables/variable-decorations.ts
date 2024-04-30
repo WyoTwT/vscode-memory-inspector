@@ -48,7 +48,7 @@ export class VariableDecorator implements ColumnContribution, Decorator {
 
     async fetchData(currentViewParameters: ReadMemoryArguments): Promise<void> {
         if (!this.active || !currentViewParameters.memoryReference || !currentViewParameters.count) { return; }
-        const visibleVariables = (await messenger.sendRequest(getVariablesType, HOST_EXTENSION, currentViewParameters))
+        const visibleVariables = (await messenger.sendRequest(getVariablesType, HOST_EXTENSION, [currentViewParameters, undefined]))
             .map<BigIntVariableRange>(transmissible => {
                 const startAddress = BigInt(transmissible.startAddress);
                 return {

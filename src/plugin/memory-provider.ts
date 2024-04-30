@@ -19,7 +19,7 @@ import * as vscode from 'vscode';
 import { isDebugEvent, isDebugRequest, isDebugResponse, sendRequest } from '../common/debug-requests';
 import { stringToBytesMemory } from '../common/memory';
 import { VariableRange, WrittenMemory } from '../common/memory-range';
-import { ReadMemoryResult, SessionContext, WriteMemoryResult } from '../common/messaging';
+import { Context, ReadMemoryResult, SessionContext, WriteMemoryResult } from '../common/messaging';
 import { AdapterRegistry } from './adapter-registry/adapter-registry';
 import * as manifest from './manifest';
 
@@ -143,14 +143,14 @@ export class MemoryProvider {
         return vscode.debug.activeDebugSession;
     }
 
-    public async readMemory(args: DebugProtocol.ReadMemoryArguments): Promise<ReadMemoryResult> {
+    public async readMemory(args: DebugProtocol.ReadMemoryArguments, context?: Context): Promise<ReadMemoryResult> {
         const session = this.assertCapability('supportsReadMemoryRequest', 'read memory');
         const handler = this.adapterRegistry?.getHandlerForSession(session.type);
-        if (handler?.readMemory) { return handler.readMemory(session, args); }
+        if (handler?.readMemory) { return handler.readMemory(session, args, context); }
         return sendRequest(session, 'readMemory', args);
     }
 
-    public async writeMemory(args: DebugProtocol.WriteMemoryArguments): Promise<WriteMemoryResult> {
+    public async writeMemory(args: DebugProtocol.WriteMemoryArguments, context?: Context): Promise<WriteMemoryResult> {
         const session = this.assertCapability('supportsWriteMemoryRequest', 'write memory');
         // Schedule a emit in case we don't retrieve a memory event
         this.scheduledOnDidMemoryWriteEvents[args.memoryReference] = response => {
@@ -162,7 +162,7 @@ export class MemoryProvider {
         };
         const handler = this.adapterRegistry?.getHandlerForSession(session.type);
         if (handler?.writeMemory) {
-            return handler.writeMemory(session, args).then(response => {
+            return handler.writeMemory(session, args, context).then(response => {
                 // The memory event is handled before we got here, if the scheduled event still exists, we need to handle it
                 this.scheduledOnDidMemoryWriteEvents[args.memoryReference]?.(response);
                 return response;
@@ -176,22 +176,34 @@ export class MemoryProvider {
         });
     }
 
-    public async getVariables(variableArguments: DebugProtocol.ReadMemoryArguments): Promise<VariableRange[]> {
+    public async getVariables(variableArguments: DebugProtocol.ReadMemoryArguments, context?: Context): Promise<VariableRange[]> {
         const session = this.assertActiveSession('get variables');
         const handler = this.adapterRegistry?.getHandlerForSession(session.type);
-        if (handler?.getResidents) { return handler.getResidents(session, variableArguments); }
-        return handler?.getVariables?.(session) ?? [];
+        if (handler?.getResidents) { return handler.getResidents(session, variableArguments, context); }
+        return handler?.getVariables?.(session, context) ?? [];
     }
 
-    public async getAddressOfVariable(variableName: string): Promise<string | undefined> {
+    public async getAddressOfVariable(variableName: string, context?: Context): Promise<string | undefined> {
         const session = this.assertActiveSession('get address of variable');
         const handler = this.adapterRegistry?.getHandlerForSession(session.type);
-        return handler?.getAddressOfVariable?.(session, variableName);
+        return handler?.getAddressOfVariable?.(session, variableName, context);
     }
 
-    public async getSizeOfVariable(variableName: string): Promise<bigint | undefined> {
+    public async getSizeOfVariable(variableName: string, context?: Context): Promise<bigint | undefined> {
         const session = this.assertActiveSession('get address of variable');
         const handler = this.adapterRegistry?.getHandlerForSession(session.type);
-        return handler?.getSizeOfVariable?.(session, variableName);
+        return handler?.getSizeOfVariable?.(session, variableName, context);
+    }
+
+    public async getContexts(): Promise<Context[]> {
+        const session = this.assertActiveSession('get list of debug Contexts');
+        const handler = this.adapterRegistry?.getHandlerForSession(session.type);
+        return handler?.getContexts?.(session) ?? [];
+    }
+
+    public async getCurrentContext(): Promise<Context|undefined> {
+        const session = this.assertActiveSession('get current debug Context');
+        const handler = this.adapterRegistry?.getHandlerForSession(session.type);
+        return handler?.getCurrentContext?.(session);
     }
 }

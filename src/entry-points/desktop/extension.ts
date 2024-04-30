@@ -16,7 +16,9 @@
 
 import * as vscode from 'vscode';
 import { AdapterRegistry } from '../../plugin/adapter-registry/adapter-registry';
+import { AmalgamatorGdbVariableTransformer, AmalgamatorSessionManager } from '../../plugin/adapter-registry/amalgamator-gdb-tracker';
 import { CAdapter } from '../../plugin/adapter-registry/c-adapter';
+import { outputChannelLogger } from '../../plugin/logger';
 import { MemoryProvider } from '../../plugin/memory-provider';
 import { MemoryStorage } from '../../plugin/memory-storage';
 import { MemoryWebview } from '../../plugin/memory-webview-main';
@@ -27,6 +29,8 @@ export const activate = async (context: vscode.ExtensionContext): Promise<Adapte
     const memoryView = new MemoryWebview(context.extensionUri, memoryProvider);
     const memoryStorage = new MemoryStorage(memoryProvider);
     const cAdapter = new CAdapter(registry);
+    const debugTypes = ['amalgamator'];
+    registry.registerAdapter(new AmalgamatorSessionManager(AmalgamatorGdbVariableTransformer, outputChannelLogger, ...debugTypes), ...debugTypes);
 
     memoryProvider.activate(context);
     registry.activate(context);

@@ -23,7 +23,7 @@ import {
     validateCount, validateMemoryReference, validateOffset
 } from '../common/memory';
 import { toHexStringWithRadixMarker } from '../common/memory-range';
-import { ApplyMemoryArguments, ApplyMemoryResult, MemoryOptions, StoreMemoryArguments } from '../common/messaging';
+import { ApplyMemoryArguments, ApplyMemoryResult, Context, MemoryOptions, StoreMemoryArguments } from '../common/messaging';
 import { isWebviewContext } from '../common/webview-context';
 import { isVariablesContext } from './external-views';
 import * as manifest from './manifest';
@@ -60,7 +60,8 @@ export class MemoryStorage {
         );
     }
 
-    public async storeMemory(args?: StoreMemoryArguments): Promise<void> {
+    public async storeMemory(storeMemArgs?: [StoreMemoryArguments, Context?]): Promise<void> {
+        const [args, context] = storeMemArgs ?? [];
         const providedDefaultOptions = await this.storeArgsToOptions(args);
         const options = await this.getStoreMemoryOptions(providedDefaultOptions);
         if (!options) {
@@ -70,7 +71,7 @@ export class MemoryStorage {
 
         const { outputFile, ...readArgs } = options;
         try {
-            const memoryResponse = await this.memoryProvider.readMemory(readArgs);
+            const memoryResponse = await this.memoryProvider.readMemory(readArgs, context);
             const memory = createMemoryFromRead(memoryResponse);
             const memoryMap = new MemoryMap({ [Number(memory.address)]: memory.bytes });
             await vscode.workspace.fs.writeFile(outputFile, new TextEncoder().encode(memoryMap.asHexString()));
@@ -89,7 +90,7 @@ export class MemoryStorage {
         }
     }
 
-    protected async storeArgsToOptions(args?: StoreMemoryArguments): Promise<Partial<StoreMemoryOptions>> {
+    protected async storeArgsToOptions(args?: StoreMemoryArguments, context?: Context): Promise<Partial<StoreMemoryOptions>> {
         if (!args) {
             return {};
         }
@@ -99,8 +100,8 @@ export class MemoryStorage {
         if (isVariablesContext(args)) {
             try {
                 const variableName = args.variable.evaluateName ?? args.variable.name;
-                const count = await this.memoryProvider.getSizeOfVariable(variableName);
-                const memoryReference = args.variable.memoryReference ?? await this.memoryProvider.getAddressOfVariable(variableName);
+                const count = await this.memoryProvider.getSizeOfVariable(variableName, context);
+                const memoryReference = args.variable.memoryReference ?? await this.memoryProvider.getAddressOfVariable(variableName, context);
                 return { count: Number(count), memoryReference, offset: 0, proposedOutputName: variableName };
             } catch (error) {
                 // ignore, we are just using them as default values
@@ -169,7 +170,7 @@ export class MemoryStorage {
                 memoryReference = toHexStringWithRadixMarker(address);
                 count = memory.length;
                 const data = bytesToStringMemory(memory);
-                await this.memoryProvider.writeMemory({ memoryReference, data });
+                await this.memoryProvider.writeMemory({ memoryReference, data }, undefined);
             }
             await vscode.window.showInformationMessage(`Memory from '${vscode.workspace.asRelativePath(options.uri)}' applied.`);
             return { memoryReference, count, offset: 0 };

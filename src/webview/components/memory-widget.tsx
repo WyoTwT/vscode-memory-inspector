@@ -17,7 +17,7 @@
 import React from 'react';
 import { WebviewIdMessageParticipant } from 'vscode-messenger-common';
 import { Memory } from '../../common/memory';
-import { WebviewSelection } from '../../common/messaging';
+import { Context, WebviewSelection } from '../../common/messaging';
 import { MemoryOptions, ReadMemoryArguments, SessionContext } from '../../common/messaging';
 import { ColumnStatus } from '../columns/column-contribution-service';
 import { HoverService } from '../hovers/hover-service';
@@ -48,6 +48,9 @@ interface MemoryWidgetProps extends MemoryDisplayConfiguration {
     fetchMemory(partialOptions?: MemoryOptions): Promise<void>;
     storeMemory(): void;
     applyMemory(): void;
+    contexts: Context[];
+    context?: Context;
+    setContext: (context: Context) => void;
 }
 
 interface MemoryWidgetState {
@@ -102,6 +105,9 @@ export class MemoryWidget extends React.Component<MemoryWidgetProps, MemoryWidge
                 isFrozen={this.props.isFrozen}
                 storeMemory={this.props.storeMemory}
                 applyMemory={this.props.applyMemory}
+                contexts={this.props.contexts}
+                context={this.props.context}
+                setContext={this.props.setContext}
             />
             <MemoryTable
                 ref={this.memoryTable}

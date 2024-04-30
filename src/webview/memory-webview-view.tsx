@@ -24,6 +24,7 @@ import { createMemoryFromRead, Memory } from '../common/memory';
 import { BigIntMemoryRange, doOverlap, Endianness, getAddressLength, getAddressString, WrittenMemory } from '../common/memory-range';
 import {
     applyMemoryType,
+    Context,
     getWebviewSelectionType,
     logMessageType,
     MemoryOptions,
@@ -64,6 +65,8 @@ export interface MemoryAppState extends MemoryState, MemoryDisplayConfiguration 
     hoverService: HoverService;
     columns: ColumnStatus[];
     isFrozen: boolean;
+    contexts: Context[];
+    context: Context | undefined;
 }
 
 const DEFAULT_SESSION_CONTEXT: SessionContext = {
@@ -114,14 +117,16 @@ class App extends React.Component<{}, MemoryAppState> {
             columns: columnContributionService.getColumns(),
             isMemoryFetching: false,
             isFrozen: false,
+            contexts: [],
+            context: undefined,
             ...MEMORY_DISPLAY_CONFIGURATION_DEFAULTS
         };
     }
 
     public componentDidMount(): void {
+        messenger.onNotification(sessionContextChangedType, sessionContext => this.sessionContextChanged(sessionContext));
         messenger.onRequest(setOptionsType, options => this.setOptions(options));
         messenger.onNotification(memoryWrittenType, writtenMemory => this.memoryWritten(writtenMemory));
-        messenger.onNotification(sessionContextChangedType, sessionContext => this.sessionContextChanged(sessionContext));
         messenger.onNotification(setMemoryViewSettingsType, config => {
             if (config.visibleColumns) {
                 for (const column of columnContributionService.getColumns()) {
@@ -185,8 +190,16 @@ class App extends React.Component<{}, MemoryAppState> {
         this.fetchMemory();
     }, 100);
 
-    protected sessionContextChanged(sessionContext: SessionContext): void {
-        this.setState({ sessionContext });
+    protected sessionContextChanged(allContext: [SessionContext, Context?, Context[]?]): void {
+        const [sessionContext, currentContext, contexts] = allContext;
+        const updatedState: Partial<MemoryAppState> = {};
+        if (typeof (currentContext) !== 'undefined') {
+            updatedState.context = currentContext;
+        }
+        if (contexts?.length) {
+            updatedState.contexts = contexts;
+        }
+        this.setState(prevState => ({ ...prevState, sessionContext, ...updatedState }));
     }
 
     public render(): React.ReactNode {
@@ -222,6 +235,9 @@ class App extends React.Component<{}, MemoryAppState> {
                 showRadixPrefix={this.state.showRadixPrefix}
                 storeMemory={this.storeMemory}
                 applyMemory={this.applyMemory}
+                contexts={this.state.contexts}
+                context={this.state.context}
+                setContext={this.setContext}
             />
         </PrimeReactProvider>;
     }
@@ -257,7 +273,7 @@ class App extends React.Component<{}, MemoryAppState> {
         };
 
         try {
-            const response = await messenger.sendRequest(readMemoryType, HOST_EXTENSION, completeOptions);
+            const response = await messenger.sendRequest(readMemoryType, HOST_EXTENSION, [completeOptions, this.state.context]);
             await Promise.all(Array.from(
                 new Set(columnContributionService.getUpdateExecutors().concat(decorationService.getUpdateExecutors())),
                 executor => executor.fetchData(completeOptions)
@@ -326,12 +342,15 @@ class App extends React.Component<{}, MemoryAppState> {
     }
 
     protected storeMemory = async (): Promise<void> => {
-        await messenger.sendRequest(storeMemoryType, HOST_EXTENSION, { ...this.state.activeReadArguments });
+        await messenger.sendRequest(storeMemoryType, HOST_EXTENSION, [{ ...this.state.activeReadArguments }, this.state.context]);
     };
 
     protected applyMemory = async (): Promise<void> => {
         await messenger.sendRequest(applyMemoryType, HOST_EXTENSION, undefined);
     };
+
+    protected setContext = (newContextState: Context) => this.setState(prevState => ({ ...prevState, context: newContextState }));
+
 }
 
 const container = document.getElementById('root') as Element;
