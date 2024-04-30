@@ -144,7 +144,10 @@ export class MemoryProvider {
     }
 
     public async readMemory(args: DebugProtocol.ReadMemoryArguments): Promise<ReadMemoryResult> {
-        return sendRequest(this.assertCapability('supportsReadMemoryRequest', 'read memory'), 'readMemory', args);
+        const session = this.assertCapability('supportsReadMemoryRequest', 'read memory');
+        const handler = this.adapterRegistry?.getHandlerForSession(session.type);
+        if (handler?.readMemory) { return handler.readMemory(session, args); }
+        return sendRequest(session, 'readMemory', args);
     }
 
     public async writeMemory(args: DebugProtocol.WriteMemoryArguments): Promise<WriteMemoryResult> {
@@ -156,6 +159,14 @@ export class MemoryProvider {
             const offset = response?.offset ? (args.offset ?? 0) + response.offset : args.offset;
             const count = response?.bytesWritten ?? stringToBytesMemory(args.data).length;
             this._onDidWriteMemory.fire({ memoryReference: args.memoryReference, offset, count });
+        };
+        const handler = this.adapterRegistry?.getHandlerForSession(session.type);
+        if (handler?.writeMemory) {
+            return handler.writeMemory(session, args).then(response => {
+                // The memory event is handled before we got here, if the scheduled event still exists, we need to handle it
+                this.scheduledOnDidMemoryWriteEvents[args.memoryReference]?.(response);
+                return response;
+            });
         };
 
         return sendRequest(session, 'writeMemory', args).then(response => {

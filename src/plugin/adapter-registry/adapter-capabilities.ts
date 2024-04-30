@@ -18,6 +18,7 @@ import { DebugProtocol } from '@vscode/debugprotocol';
 import * as vscode from 'vscode';
 import { isDebugRequest, isDebugResponse } from '../../common/debug-requests';
 import { VariableRange } from '../../common/memory-range';
+import { ReadMemoryArguments, ReadMemoryResult, WriteMemoryArguments, WriteMemoryResult } from '../../common/messaging';
 import { Logger } from '../logger';
 
 /** Represents capabilities that may be achieved with particular debug adapters but are not part of the DAP */
@@ -31,6 +32,8 @@ export interface AdapterCapabilities {
     /** Resolves the size of a given variable in bytes within the current context. */
     getSizeOfVariable?(session: vscode.DebugSession, variableName: string): Promise<bigint | undefined>;
     initializeAdapterTracker?(session: vscode.DebugSession): vscode.DebugAdapterTracker | undefined;
+    readMemory?(session: vscode.DebugSession, params: ReadMemoryArguments): Promise<ReadMemoryResult>;
+    writeMemory?(session: vscode.DebugSession, params: WriteMemoryArguments): Promise<WriteMemoryResult>;
 }
 
 export type WithChildren<Original> = Original & { children?: Array<WithChildren<DebugProtocol.Variable>> };
@@ -131,6 +134,10 @@ export class AdapterVariableTracker implements vscode.DebugAdapterTracker {
 
     /** Resolves the size of a given variable in bytes within the current context. */
     getSizeOfVariable?(variableName: string, session: vscode.DebugSession): Promise<bigint | undefined>;
+
+    readMemory?(session: vscode.DebugSession, params: ReadMemoryArguments): Promise<ReadMemoryResult>;
+
+    writeMemory?(session: vscode.DebugSession, params: WriteMemoryArguments): Promise<WriteMemoryResult>;
 }
 
 export class VariableTracker implements AdapterCapabilities {
