@@ -263,8 +263,9 @@ export class MemoryWebview implements vscode.CustomReadonlyEditorProvider {
     }
 
     protected async setSessionContext(webviewParticipant: WebviewIdMessageParticipant, context: SessionContext): Promise<void> {
+        const contexts = await this.getContexts();  // Want to read this first.
         await this.messenger.sendRequest(sessionContextChangedType, webviewParticipant, [context,
-            await this.getCurrentContext(), await this.getContexts()]);
+            await this.getCurrentContext(), contexts]);
     }
 
     protected getMemoryViewSettings(messageParticipant: WebviewIdMessageParticipant, title: string): MemoryViewSettings {
